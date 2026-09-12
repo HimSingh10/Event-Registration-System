@@ -1,0 +1,185 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile document storing account metadata, role, and organization information.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100, "minLength": 2 },
+        "email": { "type": "string", "maxLength": 120, "format": "email" },
+        "phone": { "type": "string", "maxLength": 30 },
+        "role": { "type": "string", "enum": ["attendee", "organizer", "admin", "Attendee", "Organizer", "Admin"] },
+        "organization": { "type": "string", "maxLength": 120 },
+        "department": { "type": "string", "maxLength": 100 },
+        "designation": { "type": "string", "maxLength": 100 },
+        "avatar": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "Event publication details including dates, venue, capacity, pricing, and speaker agendas.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200, "minLength": 3 },
+        "description": { "type": "string", "maxLength": 5000 },
+        "category": { "type": "string", "maxLength": 50 },
+        "date": { "type": "string", "maxLength": 20 },
+        "startTime": { "type": "string", "maxLength": 20 },
+        "endTime": { "type": "string", "maxLength": 20 },
+        "venue": { "type": "string", "maxLength": 200 },
+        "address": { "type": "string", "maxLength": 300 },
+        "locationType": { "type": "string", "enum": ["In-Person", "Virtual", "Hybrid"] },
+        "organizerId": { "type": "string", "maxLength": 128 },
+        "organizerName": { "type": "string", "maxLength": 100 },
+        "organizerAvatar": { "type": "string", "maxLength": 500 },
+        "organizerEmail": { "type": "string", "maxLength": 120 },
+        "maxCapacity": { "type": "number" },
+        "registeredCount": { "type": "number" },
+        "checkedInCount": { "type": "number" },
+        "registrationDeadline": { "type": "string", "maxLength": 30 },
+        "eventType": { "type": "string", "maxLength": 50 },
+        "ticketType": { "type": "string", "enum": ["Free", "Paid"] },
+        "price": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "status": { "type": "string", "maxLength": 50 },
+        "bannerImage": { "type": "string", "maxLength": 1000 },
+        "featured": { "type": "boolean" },
+        "isDemo": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "organizerId", "maxCapacity", "status"]
+    },
+    "Registration": {
+      "title": "Registration",
+      "description": "Attendee registration record and digital ticket details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "eventId": { "type": "string", "maxLength": 128 },
+        "eventTitle": { "type": "string", "maxLength": 200 },
+        "eventDate": { "type": "string", "maxLength": 30 },
+        "eventTime": { "type": "string", "maxLength": 50 },
+        "eventVenue": { "type": "string", "maxLength": 200 },
+        "eventBanner": { "type": "string", "maxLength": 1000 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "attendeeName": { "type": "string", "maxLength": 100 },
+        "attendeeEmail": { "type": "string", "maxLength": 120 },
+        "attendeePhone": { "type": "string", "maxLength": 30 },
+        "organization": { "type": "string", "maxLength": 120 },
+        "department": { "type": "string", "maxLength": 100 },
+        "designation": { "type": "string", "maxLength": 100 },
+        "dietaryPreference": { "type": "string", "maxLength": 100 },
+        "customNotes": { "type": "string", "maxLength": 1000 },
+        "tshirtSize": { "type": "string", "maxLength": 20 },
+        "qrCodeDataUrl": { "type": "string", "maxLength": 50000 },
+        "ticketStatus": { "type": "string", "enum": ["Confirmed", "Checked In", "Cancelled"] },
+        "registeredAt": { "type": "string" },
+        "checkedInAt": { "type": "string" },
+        "checkedInBy": { "type": "string", "maxLength": 100 },
+        "ticketPrice": { "type": "number" },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["id", "eventId", "userId", "attendeeName", "attendeeEmail", "ticketStatus"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System alerts, announcements, and registration status messages sent to users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "message": { "type": "string", "maxLength": 2000 },
+        "type": { "type": "string", "enum": ["registration", "reminder", "announcement", "update", "checkin"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "eventId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "userId", "title", "message"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "Attendee reviews and ratings for attended events.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "eventId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 100 },
+        "userAvatar": { "type": "string", "maxLength": 500 },
+        "rating": { "type": "number" },
+        "review": { "type": "string", "maxLength": 2000 },
+        "suggestions": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "eventId", "userId", "rating", "review"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Audit record of administrative and organizer operations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string" },
+        "actorName": { "type": "string", "maxLength": 100 },
+        "actorRole": { "type": "string", "maxLength": 50 },
+        "action": { "type": "string", "maxLength": 100 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "eventId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "timestamp", "actorName", "action"]
+    },
+    "CheckIn": {
+      "title": "CheckIn",
+      "description": "Verification audit log when an attendee is checked into an event via QR badge or ticket ID.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ticketId": { "type": "string", "maxLength": 128 },
+        "registrationId": { "type": "string", "maxLength": 128 },
+        "eventId": { "type": "string", "maxLength": 128 },
+        "attendeeId": { "type": "string", "maxLength": 128 },
+        "checkedInBy": { "type": "string", "maxLength": 100 },
+        "checkedInAt": { "type": "string" }
+      },
+      "required": ["id", "ticketId", "registrationId", "eventId", "checkedInBy", "checkedInAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Public and private user account profiles."
+    },
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "All published and upcoming event documents."
+    },
+    "/registrations/{registrationId}": {
+      "schema": "Registration",
+      "description": "Attendee registrations and digital tickets."
+    },
+    "/checkIns/{checkInId}": {
+      "schema": "CheckIn",
+      "description": "Badge gate scan check-in records."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "In-app notifications for attendees and organizers."
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "Event reviews submitted by attendees."
+    },
+    "/activityLogs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Administrative audit trail logs."
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Remix Remix Remix Remix EventEase – Web-Based Event Registration System",
+  "description": "Comprehensive event management and registration platform featuring event discovery, multi-step registration, digital QR tickets, organizer check-in, and analytics dashboard.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
