@@ -1,23 +1,18 @@
 /**
  * Server-Side Gemini API Handlers
- * Uses @google/genai with gemini-3.8-flash and secure server-only API keys.
- * Includes resilient fallback if no key is configured.
+ * Uses @google/genai with gemini-2.5-flash and secure server-only API keys.
  */
+import 'dotenv/config';
 import { GoogleGenAI } from '@google/genai';
 
 let geminiClient: GoogleGenAI | null = null;
 
 function getGeminiClient(): GoogleGenAI | null {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
   if (!apiKey) return null;
   if (!geminiClient) {
     geminiClient = new GoogleGenAI({
       apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
     });
   }
   return geminiClient;
@@ -31,12 +26,13 @@ export interface ChatRequestPayload {
     title: string;
     category: string;
     date: string;
-    venue: string;
+    venue?: string;
     city?: string;
     price: number;
-    ticketType: string;
-    description: string;
+    ticketType?: string;
+    description?: string;
     status: string;
+    summary?: string;
   }>;
   userContext?: {
     interests?: string[];
@@ -56,6 +52,13 @@ export interface OrganizerRequestPayload {
   currentDescription?: string;
 }
 
+const CANDIDATE_MODELS = [
+  process.env.GEMINI_MODEL,
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+].filter(Boolean) as string[];
+
 /**
  * Handle conversational AI Event Assistant
  */
@@ -64,67 +67,109 @@ export async function processAiChat(payload: ChatRequestPayload): Promise<{
   recommendedEventIds: string[];
   suggestions: string[];
 }> {
-  const { message, eventsContext = [], userContext } = payload;
+  const { message, chatHistory = [], eventsContext = [], userContext } = payload;
   const client = getGeminiClient();
 
-  // If Gemini API Key is configured, use gemini-3.8-flash
-  if (client) {
-    try {
-      const promptContext = `
-Events catalog:
-${JSON.stringify(eventsContext.slice(0, 15).map(e => ({
-  id: e.id,
-  title: e.title,
-  category: e.category,
-  date: e.date,
-  city: e.city || 'Online',
-  price: e.price === 0 ? 'Free' : `$${e.price}`,
-  status: e.status,
-  summary: e.description.slice(0, 120),
-})))}
+  if (!client) {
+    return {
+      content: `⚠️ **Gemini API Key Required**: No \`GEMINI_API_KEY\` was found in server environment variables.\n\nTo enable conversational AI assistance and personalized recommendations, please add your \`GEMINI_API_KEY\` to your \`.env\` file.\n\nYou can still explore events and register directly from the event catalog.`,
+      recommendedEventIds: eventsContext.slice(0, 3).map((e) => e.id),
+      suggestions: [
+        'How do I configure GEMINI_API_KEY?',
+        'Browse all upcoming events',
+        'Show me free workshops',
+      ],
+    };
+  }
 
-User Context:
-${JSON.stringify(userContext || {})}
+  // Format compact events catalog to minimize token bloat
+  const compactCatalog = eventsContext.slice(0, 8).map((e) => ({
+    id: e.id,
+    title: e.title,
+    category: e.category,
+    date: e.date,
+    city: e.city || 'Virtual/Online',
+    price: e.price === 0 ? 'Free' : `$${e.price}`,
+    status: e.status,
+    summary: e.summary || (e.description ? e.description.slice(0, 90) : ''),
+  }));
 
-Attendee Query: "${message}"
+  // Build prompt incorporating recent conversation history
+  const historyText =
+    chatHistory && chatHistory.length > 0
+      ? `Recent Conversation Context:\n${chatHistory
+          .slice(-6)
+          .map((h) => `${h.sender === 'user' ? 'Attendee' : 'Assistant'}: ${h.content}`)
+          .join('\n')}\n\n`
+      : '';
 
-Respond as the helpful EventEase AI Assistant.
+  const promptContext = `
+Events Catalog:
+${JSON.stringify(compactCatalog)}
+
+${userContext ? `Attendee Profile Context:\n${JSON.stringify(userContext)}\n` : ''}
+${historyText}Attendee Query: "${message}"
+
+Respond as the intelligent, helpful EventEase AI Assistant.
 Return your response in STRICT JSON matching this schema:
 {
   "content": "Friendly, informative markdown response directly answering the user's question and highlighting relevant events.",
-  "recommendedEventIds": ["evt-101", ...], // IDs of any specific events discussed or recommended
+  "recommendedEventIds": ["evt-101"], // IDs of any specific events discussed or recommended from the catalog above
   "suggestions": ["Follow-up question 1", "Follow-up question 2"]
 }
 `;
 
+  let lastError: any = null;
+
+  for (const model of CANDIDATE_MODELS) {
+    try {
       const response = await client.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model,
         contents: promptContext,
         config: {
           responseMimeType: 'application/json',
-          systemInstruction: 'You are the intelligent EventEase AI Assistant. Help attendees discover events, check agendas, and understand venue policies. Recommend real event IDs from the provided catalog.',
+          systemInstruction:
+            'You are the intelligent EventEase AI Assistant. Help attendees discover events, check agendas, and understand venue policies. Refer to recent conversation history when answering follow-up queries. Always recommend real event IDs from the provided catalog when relevant.',
         },
       });
 
       if (response.text) {
-        const parsed = JSON.parse(response.text);
-        return {
-          content: parsed.content || 'Here are the matching events based on your request.',
-          recommendedEventIds: Array.isArray(parsed.recommendedEventIds) ? parsed.recommendedEventIds : [],
-          suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [
-            'Show me free technology events',
-            'What events are happening in San Francisco?',
-            'Recommend workshops for this month',
-          ],
-        };
+        try {
+          const parsed = JSON.parse(response.text);
+          return {
+            content: parsed.content || 'Here are the matching events based on your request.',
+            recommendedEventIds: Array.isArray(parsed.recommendedEventIds) ? parsed.recommendedEventIds : [],
+            suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [
+              'Show me free technology events',
+              'What events are happening in San Francisco?',
+              'Recommend workshops for this month',
+            ],
+          };
+        } catch {
+          return {
+            content: response.text,
+            recommendedEventIds: [],
+            suggestions: ['Show me all events', 'Filter by category'],
+          };
+        }
       }
-    } catch (err) {
-      console.warn('Gemini API call failed, falling back to heuristic engine:', err);
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`Gemini model ${model} execution error:`, err?.message || err);
     }
   }
 
-  // Graceful semantic heuristic engine if no API key or network failure
-  return generateHeuristicChatResponse(message, eventsContext, userContext);
+  // Clear, non-silent error reporting when API calls fail
+  const errorDetails = lastError?.message || 'Unable to complete request with Gemini API';
+  return {
+    content: `⚠️ **Gemini API Error**: ${errorDetails}\n\nPlease check your \`GEMINI_API_KEY\` and server connectivity.`,
+    recommendedEventIds: [],
+    suggestions: [
+      'Check GEMINI_API_KEY configuration',
+      'Show me all events',
+      'Filter by category',
+    ],
+  };
 }
 
 /**
@@ -148,7 +193,7 @@ export async function processAiOrganizer(payload: OrganizerRequestPayload): Prom
       }
 
       const response = await client.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',

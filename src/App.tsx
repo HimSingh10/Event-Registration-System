@@ -209,6 +209,7 @@ const MainAppContent: React.FC = () => {
         isOpen={isAiAssistantOpen}
         onClose={() => setIsAiAssistantOpen(false)}
         onSelectEvent={handleSelectEvent}
+        onRegisterClick={handleRegisterClick}
       />
 
       {/* Discovery Preferences & Location Modal */}

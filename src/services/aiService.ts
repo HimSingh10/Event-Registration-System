@@ -11,6 +11,67 @@ export interface AiChatResponse {
 }
 
 /**
+ * Helper to extract minimal, query-relevant events for Gemini prompt (avoiding token bloat)
+ */
+function selectRelevantEvents(
+  message: string,
+  events: EventItem[],
+  userContext?: { interests?: EventCategory[]; city?: string }
+): Array<{
+  id: string;
+  title: string;
+  category: string;
+  date: string;
+  city: string;
+  price: number;
+  status: string;
+  summary: string;
+}> {
+  const q = message.toLowerCase();
+  const queryTokens = q.split(/\s+/).filter((t) => t.length > 2);
+
+  // Score events based on relevance to query tokens, city, and category
+  const scored = events.map((e) => {
+    let score = 0;
+    const titleLower = e.title.toLowerCase();
+    const catLower = e.category.toLowerCase();
+    const cityLower = (e.city || '').toLowerCase();
+    const descLower = e.description.toLowerCase();
+
+    for (const token of queryTokens) {
+      if (titleLower.includes(token)) score += 5;
+      if (catLower.includes(token)) score += 4;
+      if (cityLower.includes(token)) score += 4;
+      if (descLower.includes(token)) score += 1;
+    }
+
+    if (userContext?.city && cityLower.includes(userContext.city.toLowerCase())) {
+      score += 3;
+    }
+    if (userContext?.interests && userContext.interests.includes(e.category)) {
+      score += 2;
+    }
+    if (e.featured) score += 1;
+
+    return { event: e, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  // Select only the top 8 most relevant events with trimmed summaries
+  return scored.slice(0, 8).map(({ event: e }) => ({
+    id: e.id,
+    title: e.title,
+    category: e.category,
+    date: e.date,
+    city: e.city || (e.locationType === 'Virtual' ? 'Virtual' : 'In-Person'),
+    price: e.price,
+    status: e.status,
+    summary: e.description.slice(0, 90) + (e.description.length > 90 ? '...' : ''),
+  }));
+}
+
+/**
  * Send natural language query to EventEase AI Assistant
  */
 export async function queryAiAssistant(
@@ -20,44 +81,54 @@ export async function queryAiAssistant(
     interests?: EventCategory[];
     city?: string;
     wishlistCount?: number;
-  }
+  },
+  chatHistory?: Array<{ sender: 'user' | 'assistant'; content: string }>
 ): Promise<AiChatResponse> {
   try {
+    const compactEvents = selectRelevantEvents(message, events, userContext);
+
     const res = await fetch('/api/gemini/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message,
-        eventsContext: events.slice(0, 20).map((e) => ({
-          id: e.id,
-          title: e.title,
-          category: e.category,
-          date: e.date,
-          venue: e.venue,
-          city: e.city,
-          price: e.price,
-          ticketType: e.ticketType,
-          description: e.description,
-          status: e.status,
-        })),
+        chatHistory: chatHistory?.slice(-6),
+        eventsContext: compactEvents,
         userContext,
       }),
     });
 
     if (res.ok) {
       const data = await res.json();
+      if (data.error) {
+        return {
+          content: `⚠️ **AI Assistant Notice**: ${data.error}`,
+          recommendedEventIds: [],
+          suggestions: ['Try another question', 'Browse all events'],
+        };
+      }
       return {
         content: data.content,
-        recommendedEventIds: data.recommendedEventIds || [],
-        suggestions: data.suggestions || [],
+        recommendedEventIds: Array.isArray(data.recommendedEventIds) ? data.recommendedEventIds : [],
+        suggestions: Array.isArray(data.suggestions) ? data.suggestions : [],
+      };
+    } else {
+      const errorData = await res.json().catch(() => ({}));
+      const errorMsg = errorData.error || `Server responded with status ${res.status}`;
+      return {
+        content: `⚠️ **AI Service Error**: ${errorMsg}`,
+        recommendedEventIds: [],
+        suggestions: ['Show me all events', 'Filter by category'],
       };
     }
-  } catch (err) {
-    console.warn('Network call to AI endpoint failed, using client fallback:', err);
+  } catch (err: any) {
+    console.warn('Network call to AI endpoint failed:', err);
+    return {
+      content: `⚠️ **Connection Error**: Unable to reach the AI Assistant endpoint (${err?.message || 'Network error'}). Please verify the server is running.`,
+      recommendedEventIds: [],
+      suggestions: ['Check server status', 'Browse explore catalog'],
+    };
   }
-
-  // Client-side instant fallback if offline
-  return fallbackClientChat(message, events, userContext);
 }
 
 /**

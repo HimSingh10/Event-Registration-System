@@ -10,7 +10,7 @@ interface FeedbackModalProps {
 }
 
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({ event, isOpen, onClose }) => {
-  const { addFeedback, showToast } = useApp();
+  const { submitFeedback, currentUser, showToast } = useApp();
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [review, setReview] = useState('');
@@ -25,8 +25,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ event, isOpen, onC
       return;
     }
 
-    addFeedback({
+    submitFeedback({
       eventId: event.id,
+      userId: currentUser?.id || 'guest-user',
+      userName: currentUser?.name || 'Attendee',
+      userAvatar:
+        currentUser?.avatar ||
+        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       rating,
       review: review.trim(),
       suggestions: suggestions.trim() || undefined,

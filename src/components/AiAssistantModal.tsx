@@ -87,12 +87,22 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     setInputQuery('');
     setIsLoading(true);
 
+    const historyPayload = messages.slice(-6).map((m) => ({
+      sender: m.sender,
+      content: m.content,
+    }));
+
     try {
-      const response = await queryAiAssistant(text, events, {
-        interests: userInterests,
-        city: userLocation.city,
-        wishlistCount: wishlist.length,
-      });
+      const response = await queryAiAssistant(
+        text,
+        events,
+        {
+          interests: userInterests,
+          city: userLocation.city,
+          wishlistCount: wishlist.length,
+        },
+        historyPayload
+      );
 
       const assistantMessage: AiChatMessage = {
         id: `ai-${Date.now()}`,
@@ -104,13 +114,13 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (err) {
+    } catch (err: any) {
       setMessages((prev) => [
         ...prev,
         {
           id: `err-${Date.now()}`,
           sender: 'assistant',
-          content: 'Sorry, I ran into an issue finding matching events. Please try asking again or browse the explore catalog directly.',
+          content: `⚠️ Error: ${err?.message || 'Failed to communicate with AI Assistant.'}`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           suggestions: DEFAULT_PROMPTS.slice(0, 3),
         },
@@ -148,7 +158,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold tracking-tight">EventEase AI Assistant</h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/40 text-indigo-200 border border-indigo-400/30">
-                  Gemini 3.8 Flash
+                  Gemini 2.5 Flash
                 </span>
               </div>
               <p className="text-xs text-indigo-200/80">
