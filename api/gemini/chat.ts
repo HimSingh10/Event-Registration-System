@@ -61,12 +61,7 @@ function getGeminiClient(): GoogleGenAI | null {
   return geminiClient;
 }
 
-const CANDIDATE_MODELS = [
-  process.env.GEMINI_MODEL,
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-].filter(Boolean) as string[];
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 export async function processAiChat(payload: ChatRequestPayload): Promise<ChatResponseResult> {
   if (!payload || typeof payload.message !== 'string' || !payload.message.trim()) {
@@ -164,80 +159,74 @@ CRITICAL INSTRUCTIONS:
 }
 `;
 
-  let lastError: any = null;
+  try {
+    const response = await client.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: promptContext,
+      config: {
+        responseMimeType: 'application/json',
+        systemInstruction:
+          'You are the official EventEase AI Assistant. Your job is to help attendees discover real events, compare schedules, check venue policies, and register. Never make up fake events. Always reference real event IDs from the provided catalog.',
+      },
+    });
 
-  for (const model of CANDIDATE_MODELS) {
-    try {
-      const response = await client.models.generateContent({
-        model,
-        contents: promptContext,
-        config: {
-          responseMimeType: 'application/json',
-          systemInstruction:
-            'You are the official EventEase AI Assistant. Your job is to help attendees discover real events, compare schedules, check venue policies, and register. Never make up fake events. Always reference real event IDs from the provided catalog.',
-        },
-      });
-
-      if (response.text) {
-        let rawText = response.text.trim();
-        // Remove markdown code fence if present
-        if (rawText.startsWith('```json')) {
-          rawText = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-        } else if (rawText.startsWith('```')) {
-          rawText = rawText.replace(/^```\s*/, '').replace(/\s*```$/, '');
-        }
-
-        try {
-          const parsed = JSON.parse(rawText);
-          const rawEvents: Array<{ eventId: string; reason?: string }> = Array.isArray(parsed.events)
-            ? parsed.events.filter((e: any) => e && typeof e.eventId === 'string')
-            : [];
-
-          const recIds = rawEvents.length > 0
-            ? rawEvents.map((e) => e.eventId)
-            : Array.isArray(parsed.recommendedEventIds)
-            ? parsed.recommendedEventIds
-            : [];
-
-          return {
-            content: parsed.message || parsed.content || 'Here are the matching events based on your request.',
-            events: rawEvents,
-            recommendedEventIds: recIds,
-            suggestions: Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0
-              ? parsed.suggestions
-              : [
-                  'Show me free technology events',
-                  'Which events are happening this week?',
-                  'Recommend events based on my interests',
-                ],
-          };
-        } catch {
-          return {
-            content: response.text,
-            recommendedEventIds: [],
-            events: [],
-            suggestions: ['Show me all events', 'Filter by category'],
-          };
-        }
+    if (response.text) {
+      let rawText = response.text.trim();
+      // Remove markdown code fence if present
+      if (rawText.startsWith('```json')) {
+        rawText = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (rawText.startsWith('```')) {
+        rawText = rawText.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
-    } catch (err: any) {
-      lastError = err;
-      console.warn(`Gemini model ${model} execution error:`, err?.message || err);
-    }
-  }
 
-  // Clear error reporting when API calls fail
-  const errorDetails = lastError?.message || 'Unable to complete request with Gemini API';
-  return {
-    content: `⚠️ **Gemini API Error**: ${errorDetails}\n\nPlease check your \`GEMINI_API_KEY\` and server connectivity.`,
-    recommendedEventIds: [],
-    events: [],
-    suggestions: [
-      'Check GEMINI_API_KEY configuration',
-      'Show me all events',
-      'Filter by category',
-    ],
-  };
+      try {
+        const parsed = JSON.parse(rawText);
+        const rawEvents: Array<{ eventId: string; reason?: string }> = Array.isArray(parsed.events)
+          ? parsed.events.filter((e: any) => e && typeof e.eventId === 'string')
+          : [];
+
+        const recIds = rawEvents.length > 0
+          ? rawEvents.map((e) => e.eventId)
+          : Array.isArray(parsed.recommendedEventIds)
+          ? parsed.recommendedEventIds
+          : [];
+
+        return {
+          content: parsed.message || parsed.content || 'Here are the matching events based on your request.',
+          events: rawEvents,
+          recommendedEventIds: recIds,
+          suggestions: Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0
+            ? parsed.suggestions
+            : [
+                'Show me free technology events',
+                'Which events are happening this week?',
+                'Recommend events based on my interests',
+              ],
+        };
+      } catch {
+        return {
+          content: response.text,
+          recommendedEventIds: [],
+          events: [],
+          suggestions: ['Show me all events', 'Filter by category'],
+        };
+      }
+    }
+
+    throw new Error('Empty response received from Gemini API');
+  } catch (err: any) {
+    console.error(`Gemini API execution error with model ${GEMINI_MODEL}:`, err?.message || err);
+    return {
+      content: `⚠️ **Gemini API Error**: ${err?.message || 'Unable to complete request with Gemini API'}\n\nPlease check your \`GEMINI_API_KEY\` and server connectivity.`,
+      recommendedEventIds: [],
+      events: [],
+      suggestions: [
+        'Check GEMINI_API_KEY configuration',
+        'Show me all events',
+        'Filter by category',
+      ],
+    };
+  }
 }
 
 /**
