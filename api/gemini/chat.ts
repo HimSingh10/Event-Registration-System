@@ -75,11 +75,15 @@ export default async function handler(req: any, res: any) {
 
   try {
     const payload = await parseBody(req);
+    if (!payload || !payload.message || typeof payload.message !== 'string' || !payload.message.trim()) {
+      return sendResponse(res, 400, { error: 'Invalid request: "message" field is required and cannot be empty.' });
+    }
     const result = await processAiChat(payload);
     return sendResponse(res, 200, result);
   } catch (error: any) {
-    console.error('Vercel Gemini Chat API Error:', error);
-    return sendResponse(res, 500, {
+    console.error('Vercel Gemini Chat API Error:', error?.message || error);
+    const statusCode = error?.message?.includes('Invalid request') ? 400 : 500;
+    return sendResponse(res, statusCode, {
       error: error?.message || 'Server error occurred while processing AI request.',
     });
   }

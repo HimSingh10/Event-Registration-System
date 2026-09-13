@@ -216,12 +216,18 @@ export interface UserLocationState {
   radiusKm: number;
 }
 
+export interface AiRecommendedEventItem {
+  eventId: string;
+  reason?: string;
+}
+
 export interface AiChatMessage {
   id: string;
   sender: 'user' | 'assistant';
   content: string;
   timestamp: string;
   recommendedEventIds?: string[];
+  recommendedEvents?: AiRecommendedEventItem[];
   suggestions?: string[];
 }
 

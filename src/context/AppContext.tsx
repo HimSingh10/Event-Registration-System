@@ -165,6 +165,9 @@ interface AppContextType {
   // AI Assistant & Recommendations
   isAiAssistantOpen: boolean;
   setIsAiAssistantOpen: (open: boolean) => void;
+  aiActiveEvent: EventItem | null;
+  setAiActiveEvent: (event: EventItem | null) => void;
+  openAiAssistantWithEvent: (event?: EventItem | null) => void;
   getAiRecommendations: () => AiRecommendationResult[];
 
   // Demo seeding for testing
@@ -374,6 +377,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // AI Assistant drawer & recommendations
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
+  const [aiActiveEvent, setAiActiveEvent] = useState<EventItem | null>(null);
+
+  const openAiAssistantWithEvent = (event?: EventItem | null) => {
+    setAiActiveEvent(event || null);
+    setIsAiAssistantOpen(true);
+  };
 
   const getAiRecommendations = (): AiRecommendationResult[] => {
     return computeSmartRecommendations(
@@ -1487,6 +1496,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateUserInterests,
         isAiAssistantOpen,
         setIsAiAssistantOpen,
+        aiActiveEvent,
+        setAiActiveEvent,
+        openAiAssistantWithEvent,
         getAiRecommendations,
         seedDemoEvents,
         clearDemoData,

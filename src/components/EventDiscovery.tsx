@@ -47,6 +47,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({
     getEventDistance,
     getAiRecommendations,
     setIsAiAssistantOpen,
+    userInterests,
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,6 +72,10 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({
 
   const recommendedEventIds = useMemo(() => {
     return new Set(getAiRecommendations().map((r) => r.eventId));
+  }, [getAiRecommendations]);
+
+  const aiRecommendations = useMemo(() => {
+    return getAiRecommendations().slice(0, 3);
   }, [getAiRecommendations]);
 
   // Filtering & Sorting logic
@@ -397,6 +402,101 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({
           </div>
         </div>
       </div>
+
+      {/* AI Recommendation Section: "Recommended for You" */}
+      {!hasActiveFilters && aiRecommendations.length > 0 && (
+        <section
+          id="ai-recommended-section"
+          className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-indigo-900/5 via-violet-900/5 to-slate-900/5 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-slate-900/30 border border-indigo-200/70 dark:border-indigo-900/60 space-y-4"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Recommended for You</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                    AI Powered
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Curated picks matching your preferences in {userInterests.join(', ') || 'Technology'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsAiAssistantOpen(true)}
+              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+            >
+              <span>Ask AI for more picks</span>
+              <Sparkles className="w-3 h-3" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {aiRecommendations.map((rec) => {
+              const event = events.find((e) => e.id === rec.eventId);
+              if (!event) return null;
+              return (
+                <div
+                  key={event.id}
+                  className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs hover:border-indigo-400 dark:hover:border-indigo-500 transition-all flex flex-col justify-between group"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="px-2 py-0.5 rounded-md font-bold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-300 uppercase">
+                        {event.category}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-md font-semibold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                        {rec.highlightTag}
+                      </span>
+                    </div>
+
+                    <h3
+                      onClick={() => onSelectEvent(event)}
+                      className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 cursor-pointer transition-colors"
+                    >
+                      {event.title}
+                    </h3>
+
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-indigo-500" />
+                        {event.date}
+                      </span>
+                      <span>•</span>
+                      <span>{event.city || (event.locationType === 'Virtual' ? 'Virtual' : 'In-Person')}</span>
+                    </div>
+
+                    <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-[11px] text-indigo-700 dark:text-indigo-300 flex items-start gap-1.5 leading-snug">
+                      <Sparkles className="w-3 h-3 text-indigo-500 shrink-0 mt-0.5" />
+                      <span>{rec.reason}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center gap-2">
+                    <button
+                      onClick={() => onSelectEvent(event)}
+                      className="flex-1 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors text-center cursor-pointer"
+                    >
+                      View Details
+                    </button>
+                    <button
+                      onClick={() => onRegisterClick(event)}
+                      className="px-3 py-1 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors cursor-pointer shadow-2xs"
+                    >
+                      Register
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Events Grid */}
       {filteredEvents.length === 0 ? (

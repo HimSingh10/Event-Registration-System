@@ -51,7 +51,7 @@ export const EventDetails: React.FC<EventDetailsProps> = ({
     toggleWishlist,
     getEventDistance,
     userLocation,
-    setIsAiAssistantOpen,
+    openAiAssistantWithEvent,
   } = useApp();
   const wishlisted = isWishlisted(event.id);
   const eventDistance = getEventDistance(event);
@@ -112,7 +112,7 @@ export const EventDetails: React.FC<EventDetailsProps> = ({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsAiAssistantOpen(true)}
+            onClick={() => openAiAssistantWithEvent(event)}
             className="p-2 bg-gradient-to-r from-indigo-50 dark:from-indigo-950/60 to-violet-50 dark:to-violet-950/60 hover:from-indigo-100 hover:to-violet-100 border border-indigo-200/80 dark:border-indigo-800 rounded-xl text-indigo-700 dark:text-indigo-300 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs group"
             title="Ask AI Assistant about this event"
           >

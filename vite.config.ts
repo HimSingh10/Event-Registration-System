@@ -13,11 +13,17 @@ function geminiServerPlugin() {
         req.on('end', async () => {
           try {
             const payload = JSON.parse(body || '{}');
+            if (!payload || !payload.message || typeof payload.message !== 'string' || !payload.message.trim()) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Invalid request: "message" field is required and cannot be empty.' }));
+              return;
+            }
             const result = await processAiChat(payload);
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify(result));
           } catch (err: any) {
-            res.statusCode = 500;
+            res.statusCode = err?.message?.includes('Invalid request') ? 400 : 500;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ error: err.message || 'AI processing failed' }));
           }
