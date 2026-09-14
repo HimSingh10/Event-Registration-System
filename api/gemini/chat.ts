@@ -61,7 +61,7 @@ function getGeminiClient(): GoogleGenAI | null {
   return geminiClient;
 }
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 export async function processAiChat(payload: ChatRequestPayload): Promise<ChatResponseResult> {
   if (!payload || typeof payload.message !== 'string' || !payload.message.trim()) {

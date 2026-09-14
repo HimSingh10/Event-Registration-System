@@ -1,6 +1,6 @@
 /**
  * Server-Side Gemini API Handlers
- * Uses @google/genai with gemini-2.5-flash and secure server-only API keys.
+ * Uses @google/genai with gemini-3.6-flash and secure server-only API keys.
  */
 import 'dotenv/config';
 import { GoogleGenAI } from '@google/genai';
@@ -70,7 +70,7 @@ export interface OrganizerRequestPayload {
   currentDescription?: string;
 }
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 export interface ChatResponseResult {
   content: string;
@@ -269,7 +269,7 @@ export async function processAiOrganizer(payload: OrganizerRequestPayload): Prom
       }
 
       const response = await client.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: GEMINI_MODEL,
         contents: prompt,
         config: {
           responseMimeType: 'application/json',

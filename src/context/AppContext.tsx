@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import {
   User,
   UserRole,
+  AuthResult,
   EventItem,
   EventStatus,
   Registration,
@@ -56,16 +57,52 @@ const ADMIN_EMAILS = [
   'marcus.vance@eventease.io',
 ];
 
+export function formatFirebaseAuthError(error: any): string {
+  if (!error) return 'An unexpected error occurred.';
+  const code = error.code || '';
+  switch (code) {
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    case 'auth/user-disabled':
+      return 'This account has been disabled. Please contact support.';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Invalid email or password. Please check your credentials.';
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Please sign in or use a different email.';
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters long.';
+    case 'auth/operation-not-allowed':
+      return 'Email/Password sign-in is not enabled in Firebase configuration. Please use Google sign-in or demo personas.';
+    case 'auth/popup-closed-by-user':
+      return 'Sign-in window was closed before completing.';
+    case 'auth/cancelled-popup-request':
+      return 'Another sign-in popup is already active.';
+    case 'auth/popup-blocked':
+      return 'Sign-in popup was blocked by your browser. Please allow popups for this site.';
+    case 'auth/too-many-requests':
+      return 'Access temporarily disabled due to multiple failed login attempts. Please reset your password or try again later.';
+    case 'auth/network-request-failed':
+      return 'Network connection error. Please check your internet connection.';
+    default: {
+      const raw = error.message || 'Authentication error occurred.';
+      return raw.replace(/^Firebase:\s*/i, '').replace(/\s*\([^)]*\)\.?$/, '').trim() || raw;
+    }
+  }
+}
+
 interface AppContextType {
   currentUser: User;
   users: User[];
   role: UserRole;
+  isLoggedIn: boolean;
   firebaseAuthLoading: boolean;
   isFirebaseConnected: boolean;
 
   // Auth methods
-  loginWithGoogle: () => Promise<boolean>;
-  loginWithEmail: (email: string, pass: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<AuthResult>;
+  loginWithEmail: (email: string, pass: string) => Promise<AuthResult>;
   registerWithEmail: (userData: {
     name: string;
     email: string;
@@ -73,9 +110,9 @@ interface AppContextType {
     phone?: string;
     role: UserRole;
     organization?: string;
-  }) => Promise<boolean>;
+  }) => Promise<AuthResult>;
   logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<AuthResult>;
   switchRole: (role: UserRole) => void;
   updateUserProfile: (updates: Partial<User>) => Promise<void>;
   toggleUserStatus: (userId: string) => Promise<void>;
@@ -458,7 +495,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         try {
           const userDocRef = doc(db, 'users', fbUser.uid);
-          const userSnapshot = await (await import('../firebase')).getDoc(userDocRef);
+          const userSnapshot = await getDoc(userDocRef);
 
           if (userSnapshot.exists()) {
             const data = userSnapshot.data() as User;
@@ -708,37 +745,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   // Auth Operations
-  const loginWithGoogle = async (): Promise<boolean> => {
+  const loginWithGoogle = async (): Promise<AuthResult> => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       showToast('success', 'Signed In', `Welcome back, ${result.user.displayName || 'Attendee'}!`);
-      return true;
+      return { success: true };
     } catch (error: any) {
       console.error('Google Sign In Error:', error);
-      showToast('error', 'Sign In Failed', error.message || 'Could not sign in with Google');
-      return false;
+      if (error.code === 'auth/popup-closed-by-user') {
+        return { success: false, error: 'Sign-in cancelled. Popup was closed before completing.' };
+      }
+      const msg = formatFirebaseAuthError(error);
+      showToast('error', 'Sign In Failed', msg);
+      return { success: false, error: msg };
     }
   };
 
-  const loginWithEmail = async (email: string, pass: string): Promise<boolean> => {
+  const loginWithEmail = async (email: string, pass: string): Promise<AuthResult> => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      const msg = 'Please enter your email address.';
+      showToast('error', 'Sign In Error', msg);
+      return { success: false, error: msg };
+    }
+    if (!pass) {
+      const msg = 'Please enter your password.';
+      showToast('error', 'Sign In Error', msg);
+      return { success: false, error: msg };
+    }
+
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
-      showToast('success', 'Logged In', `Successfully signed in as ${email}`);
-      return true;
+      await signInWithEmailAndPassword(auth, trimmedEmail, pass);
+      showToast('success', 'Logged In', `Successfully signed in as ${trimmedEmail}`);
+      return { success: true };
     } catch (error: any) {
       console.error('Email Login Error:', error);
-      if (error.code === 'auth/operation-not-allowed') {
-        showToast(
-          'info',
-          'Notice',
-          'Email/Password provider not enabled in Firebase console. Switched to Google or Demo sign-in.'
-        );
-      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        showToast('error', 'Authentication Error', 'Invalid email or password.');
-      } else {
-        showToast('error', 'Login Error', error.message);
-      }
-      return false;
+      const msg = formatFirebaseAuthError(error);
+      showToast('error', 'Authentication Error', msg);
+      return { success: false, error: msg };
     }
   };
 
@@ -749,24 +793,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     phone?: string;
     role: UserRole;
     organization?: string;
-  }): Promise<boolean> => {
-    const passwordToUse = userData.password || 'EventEasePass2026!';
+  }): Promise<AuthResult> => {
+    const trimmedEmail = userData.email.trim();
+    const trimmedName = userData.name.trim();
+    const passwordToUse = userData.password || '';
+
+    if (!trimmedName) {
+      const msg = 'Please enter your full name.';
+      showToast('error', 'Registration Error', msg);
+      return { success: false, error: msg };
+    }
+    if (!trimmedEmail) {
+      const msg = 'Please enter a valid email address.';
+      showToast('error', 'Registration Error', msg);
+      return { success: false, error: msg };
+    }
+    if (!passwordToUse || passwordToUse.length < 6) {
+      const msg = 'Password must be at least 6 characters long.';
+      showToast('error', 'Registration Error', msg);
+      return { success: false, error: msg };
+    }
+
     try {
-      const cred = await createUserWithEmailAndPassword(auth, userData.email, passwordToUse);
-      if (userData.name) {
-        await updateProfile(cred.user, { displayName: userData.name });
+      const cred = await createUserWithEmailAndPassword(auth, trimmedEmail, passwordToUse);
+      if (trimmedName) {
+        await updateProfile(cred.user, { displayName: trimmedName });
       }
 
-      const isSuperAdmin = ADMIN_EMAILS.some((adm) => adm.toLowerCase() === userData.email.toLowerCase());
+      const isSuperAdmin = ADMIN_EMAILS.some((adm) => adm.toLowerCase() === trimmedEmail.toLowerCase());
       const safeRole = isSuperAdmin ? 'admin' : userData.role === 'admin' ? 'organizer' : userData.role;
 
       const newUser: User = {
         id: cred.user.uid,
-        name: userData.name,
-        email: userData.email,
-        phone: userData.phone,
+        name: trimmedName,
+        email: trimmedEmail,
+        phone: userData.phone?.trim() || '',
         role: safeRole,
-        organization: userData.organization || 'General Public',
+        organization: userData.organization?.trim() || 'General Public',
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
         status: 'active',
         createdAt: new Date().toISOString(),
@@ -776,19 +839,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setCurrentUser(newUser);
       showToast('success', 'Account Created', `Welcome to EventEase, ${newUser.name}!`);
       logActivity('User Registered', `New user registered as ${newUser.role}: ${newUser.name}`);
-      return true;
+      return { success: true };
     } catch (error: any) {
       console.error('Registration Error:', error);
       if (error.code === 'auth/operation-not-allowed') {
-        // Create local user in Firestore directly
+        // Create local user in Firestore directly for offline or local preview
         const localUid = `user-${Date.now().toString(36)}`;
         const newUser: User = {
           id: localUid,
-          name: userData.name,
-          email: userData.email,
-          phone: userData.phone,
+          name: trimmedName,
+          email: trimmedEmail,
+          phone: userData.phone?.trim() || '',
           role: userData.role,
-          organization: userData.organization || 'General Public',
+          organization: userData.organization?.trim() || 'General Public',
           avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
           status: 'active',
           createdAt: new Date().toISOString(),
@@ -796,10 +859,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         await setDoc(doc(db, 'users', localUid), newUser);
         setCurrentUser(newUser);
         showToast('success', 'Account Created', `Welcome, ${newUser.name}!`);
-        return true;
+        return { success: true };
       }
-      showToast('error', 'Registration Error', error.message || 'Could not register account.');
-      return false;
+      const msg = formatFirebaseAuthError(error);
+      showToast('error', 'Registration Error', msg);
+      return { success: false, error: msg };
     }
   };
 
@@ -813,12 +877,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string): Promise<AuthResult> => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      const msg = 'Please enter your email address.';
+      showToast('error', 'Reset Error', msg);
+      return { success: false, error: msg };
+    }
     try {
-      await sendPasswordResetEmail(auth, email);
-      showToast('success', 'Password Reset Sent', `Check ${email} for reset instructions.`);
+      await sendPasswordResetEmail(auth, trimmedEmail);
+      showToast('success', 'Password Reset Sent', `Check ${trimmedEmail} for password reset instructions.`);
+      return { success: true };
     } catch (error: any) {
-      showToast('error', 'Reset Error', error.message);
+      console.error('Reset Password Error:', error);
+      const msg = formatFirebaseAuthError(error);
+      showToast('error', 'Reset Error', msg);
+      return { success: false, error: msg };
     }
   };
 
@@ -1436,12 +1510,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const isLoggedIn = currentUser.id !== 'guest-user' && Boolean(currentUser.email);
+
   return (
     <AppContext.Provider
       value={{
         currentUser,
         users,
         role: currentUser.role,
+        isLoggedIn,
         firebaseAuthLoading,
         isFirebaseConnected,
         loginWithGoogle,

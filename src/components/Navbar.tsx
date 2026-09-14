@@ -45,6 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     role,
     switchRole,
     logout,
+    isLoggedIn,
     notifications,
     unreadNotificationCount,
     markNotificationAsRead,
@@ -431,109 +432,131 @@ export const Navbar: React.FC<NavbarProps> = ({
               {isDarkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            {/* User Profile Dropdown */}
-            <div className="relative" ref={profileRef}>
-              <button
-                id="navbar-profile-btn"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
-                  className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-700"
-                />
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 hidden lg:inline-block max-w-[100px] truncate">
-                  {currentUser.name}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
-
-              {showProfileMenu && (
-                <div
-                  id="profile-dropdown-menu"
-                  className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-in fade-in duration-150"
+            {/* User Profile / Auth Action */}
+            {isLoggedIn ? (
+              <div className="relative" ref={profileRef}>
+                <button
+                  id="navbar-profile-btn"
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                      {currentUser.name}
-                    </p>
-                    <p className="text-[11px] text-slate-400 truncate">{currentUser.email}</p>
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 capitalize">
-                      {currentUser.role}
-                    </span>
-                  </div>
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                  />
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 hidden lg:inline-block max-w-[100px] truncate">
+                    {currentUser.name}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </button>
 
-                  <div className="py-1">
-                    <button
-                      id="profile-menu-item"
-                      onClick={() => {
-                        setCurrentView('profile');
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
-                    >
-                      <UserIcon className="w-4 h-4 text-slate-400" />
-                      <span>My Profile & Tickets</span>
-                    </button>
+                {showProfileMenu && (
+                  <div
+                    id="profile-dropdown-menu"
+                    className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-in fade-in duration-150"
+                  >
+                    <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        {currentUser.name}
+                      </p>
+                      <p className="text-[11px] text-slate-400 truncate">{currentUser.email}</p>
+                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 capitalize">
+                        {currentUser.role}
+                      </span>
+                    </div>
 
-                    {role === 'organizer' && (
+                    <div className="py-1">
                       <button
-                        id="organizer-hub-menu-item"
+                        id="profile-menu-item"
                         onClick={() => {
-                          setCurrentView('organizer-dashboard');
+                          setCurrentView('profile');
                           setShowProfileMenu(false);
                         }}
-                        className="w-full px-4 py-2 text-left text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer"
                       >
-                        <LayoutDashboard className="w-4 h-4 text-slate-400" />
-                        <span>Organizer Dashboard</span>
+                        <UserIcon className="w-4 h-4 text-slate-400" />
+                        <span>My Profile & Tickets</span>
                       </button>
-                    )}
 
-                    {role === 'admin' && (
+                      {role === 'organizer' && (
+                        <button
+                          id="organizer-hub-menu-item"
+                          onClick={() => {
+                            setCurrentView('organizer-dashboard');
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer"
+                        >
+                          <LayoutDashboard className="w-4 h-4 text-slate-400" />
+                          <span>Organizer Dashboard</span>
+                        </button>
+                      )}
+
+                      {role === 'admin' && (
+                        <button
+                          id="admin-hub-menu-item"
+                          onClick={() => {
+                            setCurrentView('admin-dashboard');
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer"
+                        >
+                          <ShieldCheck className="w-4 h-4 text-slate-400" />
+                          <span>Admin Dashboard</span>
+                        </button>
+                      )}
+
                       <button
-                        id="admin-hub-menu-item"
+                        id="auth-switch-account-item"
                         onClick={() => {
-                          setCurrentView('admin-dashboard');
+                          setShowProfileMenu(false);
+                          onOpenAuth('login');
+                        }}
+                        className="w-full px-4 py-2 text-left text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Sparkles className="w-4 h-4 text-slate-400" />
+                        <span>Switch Account</span>
+                      </button>
+                    </div>
+
+                    <div className="border-t border-slate-100 dark:border-slate-700 py-1">
+                      <button
+                        id="profile-logout-item"
+                        onClick={() => {
+                          logout();
                           setShowProfileMenu(false);
                         }}
-                        className="w-full px-4 py-2 text-left text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center gap-2 cursor-pointer"
                       >
-                        <ShieldCheck className="w-4 h-4 text-slate-400" />
-                        <span>Admin Dashboard</span>
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
                       </button>
-                    )}
-
-                    <button
-                      id="auth-switch-account-item"
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        onOpenAuth('login');
-                      }}
-                      className="w-full px-4 py-2 text-left text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
-                    >
-                      <Sparkles className="w-4 h-4 text-slate-400" />
-                      <span>Switch Account</span>
-                    </button>
+                    </div>
                   </div>
-
-                  <div className="border-t border-slate-100 dark:border-slate-700 py-1">
-                    <button
-                      id="profile-logout-item"
-                      onClick={() => {
-                        logout();
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center gap-2"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  id="navbar-signin-btn"
+                  onClick={() => onOpenAuth('login')}
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  id="navbar-signup-btn"
+                  onClick={() => onOpenAuth('register')}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs shadow-indigo-600/20 transition-all cursor-pointer"
+                >
+                  <UserIcon className="w-3.5 h-3.5" />
+                  <span>Sign Up</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Mobile Hamburger Button */}
@@ -565,23 +588,70 @@ export const Navbar: React.FC<NavbarProps> = ({
           id="mobile-drawer-nav"
           className="md:hidden border-t border-slate-200 dark:border-slate-800 px-4 pt-3 pb-6 space-y-3 bg-white dark:bg-slate-900 animate-in slide-in-from-top duration-200"
         >
-          {/* User profile snippet */}
-          <div className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-10 h-10 rounded-lg object-cover"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                {currentUser.name}
+          {/* User profile snippet or Logged Out Prompt */}
+          {!isLoggedIn ? (
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-xl space-y-2">
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Sign in to EventEase
               </p>
-              <p className="text-[11px] text-slate-400 truncate">{currentUser.email}</p>
-              <span className="text-[10px] font-semibold text-indigo-600 capitalize">
-                Role: {currentUser.role}
-              </span>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Book event tickets, get digital QR passes, and receive personalized recommendations.
+              </p>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  id="mobile-signin-btn"
+                  onClick={() => {
+                    onOpenAuth('login');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold text-center shadow-xs cursor-pointer"
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  id="mobile-signup-btn"
+                  onClick={() => {
+                    onOpenAuth('register');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex-1 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold text-center cursor-pointer"
+                >
+                  Sign Up
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-10 h-10 rounded-lg object-cover"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                  {currentUser.name}
+                </p>
+                <p className="text-[11px] text-slate-400 truncate">{currentUser.email}</p>
+                <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 capitalize">
+                  Role: {currentUser.role}
+                </span>
+              </div>
+              <button
+                type="button"
+                id="mobile-logout-btn"
+                onClick={() => {
+                  logout();
+                  setMobileMenuOpen(false);
+                }}
+                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Quick Role switcher mobile */}
           <div className="grid grid-cols-3 gap-2 py-1">
@@ -592,7 +662,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   switchRole(r);
                   setMobileMenuOpen(false);
                 }}
-                className={`py-1.5 text-xs font-medium rounded-lg border text-center capitalize ${
+                className={`py-1.5 text-xs font-medium rounded-lg border text-center capitalize cursor-pointer ${
                   role === r
                     ? 'bg-indigo-600 text-white border-indigo-600 font-semibold'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
@@ -609,7 +679,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setCurrentView('landing');
                 setMobileMenuOpen(false);
               }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             >
               Home
             </button>
@@ -618,7 +688,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setCurrentView('explore');
                 setMobileMenuOpen(false);
               }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
             >
               <Compass className="w-4 h-4 text-indigo-500" />
               <span>Explore Events</span>
@@ -628,7 +698,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setCurrentView('profile');
                 setMobileMenuOpen(false);
               }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
             >
               <Ticket className="w-4 h-4 text-indigo-500" />
               <span>My Tickets & Registrations</span>
@@ -641,7 +711,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setCurrentView('organizer-dashboard');
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
                 >
                   <LayoutDashboard className="w-4 h-4 text-indigo-500" />
                   <span>Organizer Dashboard</span>
@@ -651,7 +721,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setCurrentView('qr-checkin');
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
                 >
                   <QrCode className="w-4 h-4 text-emerald-500" />
                   <span>QR Check-in Scanner</span>
@@ -666,7 +736,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setCurrentView('admin-dashboard');
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
                 >
                   <ShieldCheck className="w-4 h-4 text-indigo-500" />
                   <span>Admin Dashboard</span>
@@ -676,7 +746,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setCurrentView('qr-checkin');
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
                 >
                   <QrCode className="w-4 h-4 text-emerald-500" />
                   <span>QR Check-in Scanner</span>
@@ -691,19 +761,31 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenCreateEvent();
                 setMobileMenuOpen(false);
               }}
-              className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold text-center"
+              className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold text-center cursor-pointer shadow-xs"
             >
               + Create Event
             </button>
-            <button
-              onClick={() => {
-                onOpenAuth('login');
-                setMobileMenuOpen(false);
-              }}
-              className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300"
-            >
-              Sign In
-            </button>
+            {!isLoggedIn ? (
+              <button
+                onClick={() => {
+                  onOpenAuth('login');
+                  setMobileMenuOpen(false);
+                }}
+                className="px-3.5 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
+              >
+                Sign In
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  logout();
+                  setMobileMenuOpen(false);
+                }}
+                className="px-3.5 py-2 border border-rose-200 dark:border-rose-900/50 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 cursor-pointer"
+              >
+                Sign Out
+              </button>
+            )}
           </div>
         </div>
       )}

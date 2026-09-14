@@ -1,5 +1,10 @@
 export type UserRole = 'Attendee' | 'Organizer' | 'Admin' | 'attendee' | 'organizer' | 'admin';
 
+export interface AuthResult {
+  success: boolean;
+  error?: string;
+}
+
 export interface User {
   id: string;
   name: string;

@@ -37,6 +37,7 @@ const MainAppContent: React.FC = () => {
 
   // Modals state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [eventToRegister, setEventToRegister] = useState<EventItem | null>(null);
 
@@ -96,7 +97,10 @@ const MainAppContent: React.FC = () => {
           setCurrentView(view);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenAuth={(mode?: 'login' | 'register') => {
+          setAuthModalMode(mode || 'login');
+          setIsAuthModalOpen(true);
+        }}
         onOpenCreateEvent={() => handleOpenCreateEvent()}
         onOpenPreferences={() => setIsPreferencesModalOpen(true)}
       />
@@ -165,7 +169,11 @@ const MainAppContent: React.FC = () => {
       />
 
       {/* Modals */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
 
       <RegistrationModal
         isOpen={isRegistrationModalOpen}
